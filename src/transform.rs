@@ -1,6 +1,5 @@
 use ashlang::r1cs::constraint::R1csConstraint;
 use ashlang::r1cs::parser::R1csParser;
-use curve25519_dalek;
 use scalarff::Curve25519FieldElement;
 use scalarff::FieldElement;
 extern crate libspartan;
@@ -142,7 +141,8 @@ pub fn transform_r1cs(r1cs: &str) -> SpartanConfig {
 
     // check if the instance we created is satisfiable
     let res = inst.is_sat(&assignment_vars, &assignment_inputs);
-    assert_eq!(res.unwrap(), true);
+    // panic if the provided R1CS is not satisfied
+    assert!(res.unwrap());
 
     (
         num_cons,

@@ -13,7 +13,7 @@ use transform::transform_r1cs;
 mod structures;
 mod transform;
 
-const PROGRAM: &'static str = "
+const PROGRAM: &str = "
 let x = 4
 let y = 5
 
