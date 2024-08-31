@@ -10,6 +10,8 @@ use libspartan::InputsAssignment;
 use libspartan::Instance;
 use libspartan::VarsAssignment;
 
+use super::SpartanConfig;
+
 fn to_32(v: Vec<u8>) -> [u8; 32] {
     let mut out: [u8; 32] = [0; 32];
     if v.len() > 32 {
@@ -23,17 +25,7 @@ fn to_32(v: Vec<u8>) -> [u8; 32] {
     out
 }
 
-pub fn transform_r1cs(
-    r1cs: &str,
-) -> (
-    usize,
-    usize,
-    usize,
-    usize,
-    Instance,
-    VarsAssignment,
-    InputsAssignment,
-) {
+pub fn transform_r1cs(r1cs: &str) -> SpartanConfig {
     // We will encode the above constraints into three matrices, where
     // the coefficients in the matrix are in the little-endian byte order
     let mut a_mat: Vec<(usize, usize, [u8; 32])> = Vec::new();
@@ -136,7 +128,7 @@ pub fn transform_r1cs(
         }
     }
 
-    let inst = Instance::new(num_cons, num_vars, num_inputs, &A, &B, &C);
+    let inst = Instance::new(num_cons, num_vars, num_inputs, &a_mat, &b_mat, &c_mat);
     if let Err(e) = inst {
         panic!("error building instance: {:?}", e);
     }
