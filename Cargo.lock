@@ -256,7 +256,6 @@ dependencies = [
  "ashlang",
  "curve25519-dalek 4.1.3",
  "merlin",
- "rand 0.8.5",
  "scalarff",
  "spartan",
 ]
