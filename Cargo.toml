@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ashlang = { path = "../ashlang" }
+#ashlang = { path = "../ashlang" }
+ashlang = { git = "https://github.com/chancehudson/ashlang.git" }
 curve25519-dalek = "4.1.3"
 merlin = "3.0.0"
 scalarff = "0.1.1"
