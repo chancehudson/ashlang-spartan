@@ -41,23 +41,22 @@ pub fn transform_r1cs(r1cs: &str) -> SpartanConfig {
     let l = witness.len();
     witness[0] = witness[l - 1];
     witness[l - 1] = Curve25519FieldElement::from(1);
-    let constraints;
     // filter out the symbolic constraints
-    {
+    let constraints = {
         let r1cs_parser: R1csParser<Curve25519FieldElement> = R1csParser::new(r1cs);
-        constraints = r1cs_parser
+        r1cs_parser
             .constraints
             .into_iter()
             .filter(|c| !c.symbolic)
-            .collect::<Vec<_>>();
-    }
+            .collect::<Vec<_>>()
+    };
 
     // number of constraints
     let num_cons = constraints.len();
     // number of variables
     let num_vars = witness.len() - 1;
     let num_inputs = 0;
-    let num_non_zero_entries = witness.len() - 1;
+    let mut num_non_zero_entries = 0;
 
     // in each constraint remap the one variable to the end of the
     // var vector
@@ -112,11 +111,12 @@ pub fn transform_r1cs(r1cs: &str) -> SpartanConfig {
         vars[i] = to_32(witness[i].to_bytes_le());
     }
 
-    // every row = constrint
+    // every row = constraint
     // every column = variable
 
     for (i, constraint) in remapped_constraints.iter().enumerate() {
         for (v, col_i) in &constraint.a {
+            num_non_zero_entries += 1;
             a_mat.push((i, *col_i, to_32(v.to_bytes_le())));
         }
         for (v, col_i) in &constraint.b {
@@ -126,6 +126,8 @@ pub fn transform_r1cs(r1cs: &str) -> SpartanConfig {
             c_mat.push((i, *col_i, to_32(v.to_bytes_le())));
         }
     }
+
+    // println!("cons: {num_cons} vars: {num_vars}: non-0 entries: {num_non_zero_entries}");
 
     let inst = Instance::new(num_cons, num_vars, num_inputs, &a_mat, &b_mat, &c_mat);
     if let Err(e) = inst {
