@@ -12,9 +12,9 @@ use rand::rngs::OsRng;
 
 const PROGRAM: &'static str = "
 let x = 4
-#let y = 5
+let y = 5
 
-#let z = x * y
+let z = x * y
 ";
 
 fn main() {
@@ -29,8 +29,6 @@ fn main() {
         field: "curve25519".to_string(),
     });
     let out = compiler.compile_str(PROGRAM, "r1cs");
-    println!("{out}");
-    println!("Hello, world!");
     // produce a tiny instance
     let (
         num_cons,
@@ -107,14 +105,22 @@ fn produce_tiny_r1cs(
     let l = witness.len();
     witness[0] = witness[l - 1];
     witness[l - 1] = Curve25519FieldElement::from(1);
-    let num_cons = witness.len();
-    let num_vars = witness.len();
+    let constraints;
+    {
+        let r1cs_parser: R1csParser<Curve25519FieldElement> = R1csParser::new(r1cs);
+        constraints = r1cs_parser
+            .constraints
+            .into_iter()
+            .filter(|c| !c.symbolic)
+            .collect::<Vec<_>>();
+    }
+
+    let num_cons = constraints.len();
+    let num_vars = witness.len() - 1;
     let num_inputs = 0;
-    let r1cs_parser: R1csParser<Curve25519FieldElement> = R1csParser::new(r1cs);
     // in each constraint remap the one variable to the end of the
     // var vector
-    let remapped_constraints = r1cs_parser
-        .constraints
+    let remapped_constraints = constraints
         .iter()
         .map(|constraint| {
             let mut new_a = vec![];
@@ -122,23 +128,29 @@ fn produce_tiny_r1cs(
             let mut new_c = vec![];
             for (v, var_i) in constraint.a.clone() {
                 if var_i == 0 {
-                    new_a.push((v, constraint.a.len() - 1));
+                    new_a.push((v, witness.len() - 1));
                 } else if var_i == witness.len() - 1 {
                     new_a.push((v, 0));
+                } else {
+                    new_a.push((v, var_i));
                 }
             }
             for (v, var_i) in constraint.b.clone() {
                 if var_i == 0 {
-                    new_b.push((v, constraint.b.len() - 1));
+                    new_b.push((v, witness.len() - 1));
                 } else if var_i == witness.len() - 1 {
                     new_b.push((v, 0));
+                } else {
+                    new_b.push((v, var_i));
                 }
             }
             for (v, var_i) in constraint.c.clone() {
                 if var_i == 0 {
-                    new_c.push((v, constraint.c.len() - 1));
+                    new_c.push((v, witness.len() - 1));
                 } else if var_i == witness.len() - 1 {
                     new_c.push((v, 0));
+                } else {
+                    new_c.push((v, var_i));
                 }
             }
             R1csConstraint {
@@ -152,7 +164,7 @@ fn produce_tiny_r1cs(
             }
         })
         .collect::<Vec<_>>();
-    let mut num_non_zero_entries = witness.len();
+    let num_non_zero_entries = witness.len() - 1;
 
     // create a VarsAssignment
     let mut vars = vec![Scalar::ZERO.to_bytes(); num_vars];
@@ -164,7 +176,6 @@ fn produce_tiny_r1cs(
     // every column = variable
 
     for (i, constraint) in remapped_constraints.iter().enumerate() {
-        // num_non_zero_entries += 1;
         for (v, col_i) in &constraint.a {
             A.push((i, *col_i, to_32(v.to_bytes_le())));
         }
