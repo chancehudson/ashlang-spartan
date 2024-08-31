@@ -29,8 +29,11 @@ step_defs:
         rustup default stable
         rustup component add clippy
 
+# this RUST_MIN_STACK var the result of a bug
+# in rustc 1.80.0. Tracking here: https://github.com/chancehudson/ashlang/issues/38
+# This should be removed ASAP (hopefully in 1.81.0)
 environment: &rust_env
-  HELLO: "world"
+  RUST_MIN_STACK: "33554432"
 
 jobs:
   clippy:
