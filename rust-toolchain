@@ -1,0 +1,5 @@
+[toolchain]
+channel = "nightly"
+components = [ "rustfmt", "rustc-dev" ]
+profile = "minimal"
+
