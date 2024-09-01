@@ -25,7 +25,7 @@ let _ = z * x
 fn main() {
     let mut compiler: Compiler<Curve25519FieldElement> = Compiler::new(&Config {
         include_paths: vec![],
-        verbosity: 0,
+        verbosity: 1,
         inputs: vec![],
         secret_inputs: vec![],
         target: "r1cs".to_string(),
