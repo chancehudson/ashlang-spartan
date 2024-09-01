@@ -4,6 +4,7 @@ use scalarff::Curve25519FieldElement;
 use scalarff::FieldElement;
 extern crate libspartan;
 extern crate merlin;
+use anyhow::Result;
 use curve25519_dalek::scalar::Scalar;
 use libspartan::InputsAssignment;
 use libspartan::Instance;
@@ -31,7 +32,7 @@ fn to_32(v: Vec<u8>) -> [u8; 32] {
 /// - calculate a witness given some inputs
 /// - rearrange the R1CS variables such that the `one` variable and all inputs are at the end
 /// - prepare a SpartanConfig structure to be used with `ashlang_spartan::prove`
-pub fn transform_r1cs(r1cs: &str) -> SpartanConfig {
+pub fn transform_r1cs(r1cs: &str) -> Result<SpartanConfig> {
     let witness = ashlang::r1cs::witness::build::<Curve25519FieldElement>(r1cs);
     if let Err(e) = witness {
         panic!("error building witness: {:?}", e);
@@ -47,7 +48,7 @@ pub fn transform_r1cs(r1cs: &str) -> SpartanConfig {
 
     // filter out the symbolic constraints
     let constraints = {
-        let r1cs_parser: R1csParser<Curve25519FieldElement> = R1csParser::new(r1cs);
+        let r1cs_parser: R1csParser<Curve25519FieldElement> = R1csParser::new(r1cs)?;
         r1cs_parser
             .constraints
             .into_iter()
@@ -161,7 +162,7 @@ pub fn transform_r1cs(r1cs: &str) -> SpartanConfig {
     // panic if the provided R1CS is not satisfied
     assert!(res.unwrap());
 
-    (
+    Ok((
         num_cons,
         num_vars,
         num_inputs,
@@ -169,5 +170,5 @@ pub fn transform_r1cs(r1cs: &str) -> SpartanConfig {
         inst,
         assignment_vars,
         assignment_inputs,
-    )
+    ))
 }

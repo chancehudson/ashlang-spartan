@@ -1,3 +1,4 @@
+use anyhow::Result;
 use ashlang::compiler::Compiler;
 use ashlang::Config;
 use scalarff::Curve25519FieldElement;
@@ -22,7 +23,7 @@ let z = x * y
 let _ = z * x
 ";
 
-fn main() {
+fn main() -> Result<()> {
     let mut compiler: Compiler<Curve25519FieldElement> = Compiler::new(&Config {
         include_paths: vec![],
         verbosity: 1,
@@ -32,13 +33,14 @@ fn main() {
         extension_priorities: vec!["ash".to_string()],
         entry_fn: "entry".to_string(),
         field: "curve25519".to_string(),
-    });
-    let out = compiler.compile_str(PROGRAM, "r1cs");
+    })?;
+    let out = compiler.compile_str(PROGRAM)?;
     // produce a tiny instance
-    let config = transform_r1cs(&out);
+    let config = transform_r1cs(&out)?;
     let spartan_proof = prove(config);
 
     let valid = verify(spartan_proof);
     assert!(valid);
     println!("proof verification successful!");
+    Ok(())
 }
