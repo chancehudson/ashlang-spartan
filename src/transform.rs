@@ -11,6 +11,9 @@ use libspartan::VarsAssignment;
 
 use super::SpartanConfig;
 
+/// Convert a vector into a fixed-size slice
+/// panic if the input vector.len() > 32
+/// if the input vector.len() < 32, fill the remainder with zeros
 fn to_32(v: Vec<u8>) -> [u8; 32] {
     let mut out: [u8; 32] = [0; 32];
     if v.len() > 32 {
@@ -24,23 +27,24 @@ fn to_32(v: Vec<u8>) -> [u8; 32] {
     out
 }
 
+/// Take an ar1cs source file and do the following:
+/// - calculate a witness given some inputs
+/// - rearrange the R1CS variables such that the `one` variable and all inputs are at the end
+/// - prepare a SpartanConfig structure to be used with `ashlang_spartan::prove`
 pub fn transform_r1cs(r1cs: &str) -> SpartanConfig {
-    // We will encode the above constraints into three matrices, where
-    // the coefficients in the matrix are in the little-endian byte order
-    let mut a_mat: Vec<(usize, usize, [u8; 32])> = Vec::new();
-    let mut b_mat: Vec<(usize, usize, [u8; 32])> = Vec::new();
-    let mut c_mat: Vec<(usize, usize, [u8; 32])> = Vec::new();
-
-    // parameters of the R1CS instance rounded to the nearest power of two
     let witness = ashlang::r1cs::witness::build::<Curve25519FieldElement>(r1cs);
     if let Err(e) = witness {
         panic!("error building witness: {:?}", e);
     }
     let mut witness = witness.unwrap();
+
     // put the one variable at the end of the witness vector
+    // all the R1csConstraint variables need to be modified similary
+    // see the massive iterator body below
     let l = witness.len();
     witness[0] = witness[l - 1];
     witness[l - 1] = Curve25519FieldElement::from(1);
+
     // filter out the symbolic constraints
     let constraints = {
         let r1cs_parser: R1csParser<Curve25519FieldElement> = R1csParser::new(r1cs);
@@ -56,10 +60,15 @@ pub fn transform_r1cs(r1cs: &str) -> SpartanConfig {
     // number of variables
     let num_vars = witness.len() - 1;
     let num_inputs = 0;
+
+    // this variable is absurdly complex, it works for now
+    // but if anything weird happens ask the spartan authors
     let mut num_non_zero_entries = 0;
 
     // in each constraint remap the one variable to the end of the
     // var vector
+    // TODO: when inputs are supported by ashlang they will
+    // need to be moved to the correct place as well.
     let remapped_constraints = constraints
         .iter()
         .map(|constraint| {
@@ -113,6 +122,12 @@ pub fn transform_r1cs(r1cs: &str) -> SpartanConfig {
 
     // every row = constraint
     // every column = variable
+
+    // We will encode the above constraints into three matrices, where
+    // the coefficients in the matrix are in the little-endian byte order
+    let mut a_mat: Vec<(usize, usize, [u8; 32])> = Vec::new();
+    let mut b_mat: Vec<(usize, usize, [u8; 32])> = Vec::new();
+    let mut c_mat: Vec<(usize, usize, [u8; 32])> = Vec::new();
 
     for (i, constraint) in remapped_constraints.iter().enumerate() {
         for (v, col_i) in &constraint.a {
