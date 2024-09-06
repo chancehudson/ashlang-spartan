@@ -32,8 +32,8 @@ fn to_32(v: Vec<u8>) -> [u8; 32] {
 /// - calculate a witness given some inputs
 /// - rearrange the R1CS variables such that the `one` variable and all inputs are at the end
 /// - prepare a SpartanConfig structure to be used with `ashlang_spartan::prove`
-pub fn transform_r1cs(r1cs: &str) -> Result<SpartanConfig> {
-    let witness = ashlang::r1cs::witness::build::<Curve25519FieldElement>(r1cs);
+pub fn transform_r1cs(r1cs: &str, inputs: Vec<Curve25519FieldElement>) -> Result<SpartanConfig> {
+    let witness = ashlang::r1cs::witness::build::<Curve25519FieldElement>(r1cs, inputs);
     if let Err(e) = witness {
         panic!("error building witness: {:?}", e);
     }
@@ -42,9 +42,9 @@ pub fn transform_r1cs(r1cs: &str) -> Result<SpartanConfig> {
     // put the one variable at the end of the witness vector
     // all the R1csConstraint variables need to be modified similary
     // see the massive iterator body below
-    let l = witness.len();
-    witness[0] = witness[l - 1];
-    witness[l - 1] = Curve25519FieldElement::from(1);
+    let l = witness.variables.len();
+    witness.variables[0] = witness.variables[l - 1];
+    witness.variables[l - 1] = Curve25519FieldElement::from(1);
 
     // filter out the symbolic constraints
     let constraints = {
@@ -59,7 +59,7 @@ pub fn transform_r1cs(r1cs: &str) -> Result<SpartanConfig> {
     // number of constraints
     let num_cons = constraints.len();
     // number of variables
-    let num_vars = witness.len() - 1;
+    let num_vars = witness.variables.len() - 1;
     let num_inputs = 0;
 
     // this variable is absurdly complex, it works for now
@@ -78,8 +78,8 @@ pub fn transform_r1cs(r1cs: &str) -> Result<SpartanConfig> {
             let mut new_c = vec![];
             for (v, var_i) in constraint.a.clone() {
                 if var_i == 0 {
-                    new_a.push((v, witness.len() - 1));
-                } else if var_i == witness.len() - 1 {
+                    new_a.push((v, witness.variables.len() - 1));
+                } else if var_i == witness.variables.len() - 1 {
                     new_a.push((v, 0));
                 } else {
                     new_a.push((v, var_i));
@@ -87,8 +87,8 @@ pub fn transform_r1cs(r1cs: &str) -> Result<SpartanConfig> {
             }
             for (v, var_i) in constraint.b.clone() {
                 if var_i == 0 {
-                    new_b.push((v, witness.len() - 1));
-                } else if var_i == witness.len() - 1 {
+                    new_b.push((v, witness.variables.len() - 1));
+                } else if var_i == witness.variables.len() - 1 {
                     new_b.push((v, 0));
                 } else {
                     new_b.push((v, var_i));
@@ -96,8 +96,8 @@ pub fn transform_r1cs(r1cs: &str) -> Result<SpartanConfig> {
             }
             for (v, var_i) in constraint.c.clone() {
                 if var_i == 0 {
-                    new_c.push((v, witness.len() - 1));
-                } else if var_i == witness.len() - 1 {
+                    new_c.push((v, witness.variables.len() - 1));
+                } else if var_i == witness.variables.len() - 1 {
                     new_c.push((v, 0));
                 } else {
                     new_c.push((v, var_i));
@@ -118,7 +118,7 @@ pub fn transform_r1cs(r1cs: &str) -> Result<SpartanConfig> {
     // create a VarsAssignment
     let mut vars = vec![Scalar::ZERO.to_bytes(); num_vars];
     for i in 0..num_vars {
-        vars[i] = to_32(witness[i].to_bytes_le());
+        vars[i] = to_32(witness.variables[i].to_bytes_le());
     }
 
     // every row = constraint

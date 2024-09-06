@@ -6,10 +6,10 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.86"
 #ashlang = { path = "../ashlang" }
-ashlang = { git = "https://github.com/chancehudson/ashlang.git" }
+ashlang = { git = "https://github.com/chancehudson/ashlang.git", branch = "r1cs-inputs" }
 curve25519-dalek = "4.1.3"
 merlin = "3.0.0"
-scalarff = "0.1.1"
+scalarff = "0.2.1"
 
 [dependencies.spartan]
 #path = "../spartan"

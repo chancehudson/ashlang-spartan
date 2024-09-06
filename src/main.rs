@@ -36,7 +36,7 @@ fn main() -> Result<()> {
     })?;
     let out = compiler.compile_str(PROGRAM)?;
     // produce a tiny instance
-    let config = transform_r1cs(&out)?;
+    let config = transform_r1cs(&out, vec![])?;
     let spartan_proof = prove(config);
 
     let valid = verify(spartan_proof);
